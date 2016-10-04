@@ -2,22 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef camera {
+typedef struct {
   double width;
   double height;
-}
+} camera;
 
-typedef plane {
+typedef struct {
   double *color[3];
   double *position[3];
   double *normal[3];
-}
+} plane;
 
-typedef sphere {
+typedef struct {
   double *color[3];
   double *position[3];
   double radius;
-}
+} sphere;
 
 int line = 1;
 
