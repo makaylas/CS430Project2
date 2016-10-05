@@ -8,16 +8,18 @@ typedef struct {
 } camera;
 
 typedef struct {
+  char *type;
   double *color[3];
   double *position[3];
-  double *normal[3];
-} plane;
-
-typedef struct {
-  double *color[3];
-  double *position[3];
-  double radius;
-} sphere;
+  union {
+    struct {
+      double *normal[3];
+    } plane;
+    struct {
+      double radius;
+    } sphere;
+  }
+} 
 
 int line = 1;
 
@@ -112,7 +114,6 @@ double next_number (FILE* json) {
   double value;
  
   fscanf(json, "%lf", &value);
-  printf("Value: %lf\n", value);
 
   if (feof(json)) {
     fprintf(stderr, "Error: Unexpected end of file.\n");
@@ -219,7 +220,7 @@ void read_scene (char* filename) {
             if (strcmp(key, "width") == 0) {
               double value = next_number(json);
               if (value < 1) {
-		fprintf(stderr, "Error: Camera width, %f, is invalid.\n", value);
+		fprintf(stderr, "Error: Camera width, %lf, is invalid.\n", value);
                 exit(1);
               }
               cam.width = value;      
@@ -227,7 +228,7 @@ void read_scene (char* filename) {
             else if (strcmp(key, "height") == 0) {
               double value = next_number(json);
               if (value < 1) {
-                fprintf(stderr, "Error: Camera height, %f, is invalid.\n", value);
+                fprintf(stderr, "Error: Camera height, %lf, is invalid.\n", value);
                 exit(1);
               }
               cam.height = value;
