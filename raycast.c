@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
+
 
 typedef struct {
   double width;
@@ -130,44 +132,46 @@ double next_number (FILE* json) {
     fprintf(stderr, "Error: Error reading file.\n");
     exit(1);
   }
-  if (value == EOF) {
-    fprintf(stderr, "Error: Error reading file.\n");
-    exit(1);
-  }
+
   return value;
 }
 
 double* next_vector (FILE* json) {
 
-  printf("Before malloc\n");
-
   double* v = malloc(3*sizeof(double));
   expect_c(json, '[');
   skip_ws(json);
 
-  printf("Before first next_number\n");
   v[0] = next_number(json);
   skip_ws(json);
   expect_c(json, ',');
   skip_ws(json);
 
-  printf("Before second next_number\n");
   v[1] = next_number(json);
   skip_ws(json);
   expect_c(json, ',');
   skip_ws(json);
  
-  printf("Before last next_number\n");
   v[2] = next_number(json);
   skip_ws(json);
   expect_c(json, ']');
-   
-  printf("Before return\n");
   return v;
 }
 
+double sqr(double v) {
+  return v*v;
+}
 
-void read_scene (char* filename) {
+void normalize(double* v) {
+  double len = sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
+  v[0] /= len;
+  v[1] /= len;
+  v[2] /= len;
+}
+
+
+
+Object* read_scene (char* filename) {
 
   int c;
   FILE* json = fopen(filename, "r");
@@ -185,21 +189,27 @@ void read_scene (char* filename) {
   skip_ws(json);
 
   // Find the objects
+  c = fgetc(json);
+  if (c == ']') {
+    fprintf(stderr, "Error: This is the worst scene file EVER.\n");
+    fclose(json);
+    exit(1);
+  }
 
   camera cam;
   cam.height = -1;
   cam.width = -1;
 
-//  Object* objectArray = malloc(sizeof(Object) * 1000);
+  Object* objectArray = malloc(sizeof(Object) * 1000);
 
   int i = 0;
 
   while (1) {
     c = fgetc(json);
     if (c == ']') {
-      fprintf(stderr, "Error: This is the worst scene file EVER.\n");
+      
       fclose(json);
-      exit(1);
+      exit(0);
     }
 
     //Parse the object
@@ -236,7 +246,7 @@ void read_scene (char* filename) {
             skip_ws(json);
             expect_c(json, ':');
             skip_ws(json);
-            printf("Key: %s\n", key);
+     
             if (strcmp(key, "width") == 0) {
               if (cam.widthGiven) {
                 fprintf(stderr, "Error: Camera width has already been set.\n");
@@ -251,57 +261,55 @@ void read_scene (char* filename) {
               
               cam.widthGiven = true;
               cam.width = keyValue;
-              printf("Width Assigned\n");      
             }
+
             else if (strcmp(key, "height") == 0) {
-              printf("Before height checks\n");
+
               if (cam.heightGiven) {
                 fprintf(stderr, "Error: Camera height has already been set.\n");
                 exit(1);
               }
-              printf("Before height next_number\n");
+
               double keyValue = next_number(json);
-              printf("After height next_number\n");
+
               if (keyValue < 1) {
                 fprintf(stderr, "Error: Camera height, %lf, is invalid.\n", keyValue);
                 exit(1);
               }
               cam.heightGiven = true;
               cam.height = keyValue;
-              printf("Height Assigned\n");
+
             }
           }
           else {
             fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
                     key, line);
+            exit(1);
             //char* value = next_string(json);
           }
-          printf("Before whitespace skipping after an attribute\n");
+   
           skip_ws(json);
         }
-        printf("After while loop.\n");
+
         if ((!cam.heightGiven) || (!cam.widthGiven)) {
           fprintf(stderr, "Error: Camera height or width not given.\n");
           exit(1); 
         }
-        printf("Camera done\n");
-        fflush(stdout);
+ 
       }
       
 
       //If the object is a sphere store it in the sphere struct
       else if (strcmp(value, "sphere") == 0) {
-        printf("Before object creation\n");
+
         Object aSphere;
         aSphere.type = value;
         aSphere.colorGiven = false;
         aSphere.positionGiven = false;
         aSphere.sphere.radiusGiven = false;
 
-        printf("After sphere creation\n");
-
         while (1) {
-          printf("Inside sphere before next_c\n");
+
           c = next_c(json);
           if (c == '}') {
 
@@ -310,39 +318,38 @@ void read_scene (char* filename) {
           }
           else if (c == ',') {
             // read another field
-            printf("Before skipping whitespace\n");
+
             skip_ws(json);
             char* key = next_string(json);
             skip_ws(json);
             expect_c(json, ':');
             skip_ws(json);
-            printf("After skipping whitespace and colons and stuff\n");
-            printf("Key: %s\n", key);
+
             if (strcmp(key, "color") == 0) {
-              printf("Before color creation\n");
+
               if (aSphere.colorGiven) {
                 fprintf(stderr, "Error: Sphere color has already been set.\n");
                 exit(1);
               }
-              printf("Before next_vector in sphere\n");
+
               double *keyValue = next_vector(json);
-              printf("After next_vector\n");
+
               if ((keyValue[0] < 0) || (keyValue[0] > 255) || (keyValue[1] < 0) || (keyValue[1] > 255) 
                    || (keyValue[2] < 0) || (keyValue[2] > 255)) {
                 fprintf(stderr, "Error: Sphere color is invalid.\n");
                 exit(1);
               }
               aSphere.colorGiven = true;
-              printf("Before assigning values to aSphere\n");
+
               aSphere.color[0] = keyValue[0];
-              printf("After first value assigned\n");
+
               aSphere.color[1] = keyValue[1];
               aSphere.color[2] = keyValue[2];
-              printf("After assigning all of the values in color\n");
+
             }
 
             else if (strcmp(key, "radius") == 0) {
-              printf("Before radius stuff\n");
+
               if (aSphere.sphere.radiusGiven) {
                 fprintf(stderr, "Error: Sphere radius has already been set.\n");
                 exit(1);
@@ -357,7 +364,7 @@ void read_scene (char* filename) {
             }
 
             else if (strcmp(key, "position") == 0) {
-              printf("Before position stuff\n");
+
               if (aSphere.positionGiven) {
                 fprintf(stderr, "Error: Sphere position has already been set.\n");
                 exit(1);
@@ -368,8 +375,7 @@ void read_scene (char* filename) {
               aSphere.position[0] = keyValue[0];
               aSphere.position[1] = keyValue[1];
               aSphere.position[2] = keyValue[2];
-              printf("Position: %lf, %lf, %lf\n", aSphere.position[0], aSphere.position[1],  
-                     aSphere.position[2]);
+
             }
           else {
             fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
@@ -378,68 +384,115 @@ void read_scene (char* filename) {
           }
           skip_ws(json);
         }
-
+        }
+        if (!aSphere.positionGiven || !aSphere.colorGiven || !aSphere.sphere.radiusGiven) {
+          fprintf(stderr, "Error: Position %d, color %d, and radius %d must be given.\n", aSphere.positionGiven, aSphere.colorGiven, aSphere.sphere.radiusGiven);
+          exit(1);
+        }
+        objectArray[i] = aSphere;
+      }
       //If the object is a plane store it in the plane struct
       else if (strcmp(value, "plane") == 0) {
-        printf("Before plane\n");
+
+        Object aPlane;
+        aPlane.type = value;
+        aPlane.colorGiven = false;
+        aPlane.positionGiven = false;
+        aPlane.plane.normalGiven = false;
+
+        while (1) {
+
+          c = next_c(json);
+          if (c == '}') {
+
+           // stop parsing this object
+            break;
+          }
+          else if (c == ',') {
+            // read another field
+
+            skip_ws(json);
+            char* key = next_string(json);
+            skip_ws(json);
+            expect_c(json, ':');
+            skip_ws(json);
+
+            if (strcmp(key, "color") == 0) {
+              if (aPlane.colorGiven) {
+                fprintf(stderr, "Error: Plane color has already been set.\n");
+                exit(1);
+              }
+
+              double *keyValue = next_vector(json);
+
+              if ((keyValue[0] < 0) || (keyValue[0] > 255) || (keyValue[1] < 0) || (keyValue[1] > 255)
+                   || (keyValue[2] < 0) || (keyValue[2] > 255)) {
+                fprintf(stderr, "Error: Plane color is invalid.\n");
+                exit(1);
+              }
+
+              aPlane.colorGiven = true;
+              aPlane.color[0] = keyValue[0];
+              aPlane.color[1] = keyValue[1];
+              aPlane.color[2] = keyValue[2];
+            }
+
+            else if (strcmp(key, "normal") == 0) {
+
+              if (aPlane.plane.normalGiven) {
+                fprintf(stderr, "Error: Plane radius has already been set.\n");
+                exit(1);
+
+              }
+              double *keyValue = next_vector(json);
+
+              aPlane.plane.normalGiven = true;
+              aPlane.plane.normal[0] = keyValue[0];
+              aPlane.plane.normal[1] = keyValue[1];
+              aPlane.plane.normal[2] = keyValue[2];
+            }
+
+            else if (strcmp(key, "position") == 0) {
+
+              if (aPlane.positionGiven) {
+                fprintf(stderr, "Error: Plane position has already been set.\n");
+                exit(1);
+              }
+              double *keyValue = next_vector(json);
+
+              aPlane.positionGiven = true;
+              aPlane.position[0] = keyValue[0];
+              aPlane.position[1] = keyValue[1];
+              aPlane.position[2] = keyValue[2];
+
+            }
+          else {
+            fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
+                    key, line);
+            //char* value = next_string(json);
+          }
+          skip_ws(json);
+        }
+        }
+        if (!aPlane.positionGiven || !aPlane.colorGiven || !aPlane.plane.normalGiven) {
+          fprintf(stderr, "Error: Position, color, and normal must be given.\n");
+          exit(1);
+        }
+        objectArray[i] = aPlane;
       }
       else {
         fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
         exit(1);
       }      
-      }
-      printf("Before whitespace skipping between objects\n");
+
       skip_ws(json);
-      }
-     /* while (1) {
-	// , }
-	c = next_c(json);
-	if (c == '}') {
-	  // stop parsing this object
-	  break;
-	} else if (c == ',') {
-	  // read another field
-	  skip_ws(json);
-	  char* key = next_string(json);
-	  skip_ws(json);
-	  expect_c(json, ':');
-	  skip_ws(json);
-	  if ((strcmp(key, "width") == 0) ||
-	      (strcmp(key, "height") == 0) ||
-	      (strcmp(key, "radius") == 0)) {
-	    double value = next_number(json);
-	  } else if ((strcmp(key, "color") == 0) ||
-		     (strcmp(key, "position") == 0) ||
-		     (strcmp(key, "normal") == 0)) {
-	    double* value = next_vector(json);
-	  } else {
-	    fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
-		    key, line);
-	    //char* value = next_string(json);
-	  }
-	  skip_ws(json);
-	} 
-        else {
-	  fprintf(stderr, "Error: Unexpected value on line %d\n", line);
-	  exit(1);
-	}
-      }
-      skip_ws(json);
-      c = next_c(json);
-      if (c == ',') {
-	// noop
-	skip_ws(json);
-      } else if (c == ']') {
-	fclose(json);
-	return;
-      } else {
-	fprintf(stderr, "Error: Expecting ',' or ']' on line %d.\n", line);
-	exit(1);
-      }
-    }*/
+      
     }
+   
+   i = i + 1;
   }
 }
+
 
 int main(int c, char** argv) {
   read_scene(argv[1]);
