@@ -4,14 +4,6 @@
 #include <stdbool.h>
 #include <math.h>
 
-
-typedef struct {
-  double width;
-  double height;
-  bool widthGiven;
-  bool heightGiven;
-} camera;
-
 typedef struct {
   char *type;
   double color[3];
@@ -19,6 +11,12 @@ typedef struct {
   bool colorGiven;
   bool positionGiven;
   union {
+    struct {
+      double width;
+      double height;
+      bool widthGiven;
+      bool heightGiven;
+    } camera;
     struct {
       double normal[3];
       bool normalGiven;
@@ -196,9 +194,9 @@ Object* read_scene (char* filename) {
     exit(1);
   }
 
-  camera cam;
-  cam.height = -1;
-  cam.width = -1;
+  Object cam;
+  cam.camera.height = -1;
+  cam.camera.width = -1;
 
   Object* objectArray = malloc(sizeof(Object) * 1000);
 
@@ -230,8 +228,8 @@ Object* read_scene (char* filename) {
 
       //If the object is a camera store it in the camera struct
       if (strcmp(value, "camera") == 0) {
-        cam.heightGiven = false;
-        cam.widthGiven = false;
+        cam.camera.heightGiven = false;
+        cam.camera.widthGiven = false;
 
         while (1) {
           c = next_c(json);
@@ -248,7 +246,7 @@ Object* read_scene (char* filename) {
             skip_ws(json);
      
             if (strcmp(key, "width") == 0) {
-              if (cam.widthGiven) {
+              if (cam.camera.widthGiven) {
                 fprintf(stderr, "Error: Camera width has already been set.\n");
                 exit(1);
               }
@@ -259,13 +257,13 @@ Object* read_scene (char* filename) {
                 exit(1);
               }
               
-              cam.widthGiven = true;
-              cam.width = keyValue;
+              cam.camera.widthGiven = true;
+              cam.camera.width = keyValue;
             }
 
             else if (strcmp(key, "height") == 0) {
 
-              if (cam.heightGiven) {
+              if (cam.camera.heightGiven) {
                 fprintf(stderr, "Error: Camera height has already been set.\n");
                 exit(1);
               }
@@ -276,8 +274,8 @@ Object* read_scene (char* filename) {
                 fprintf(stderr, "Error: Camera height, %lf, is invalid.\n", keyValue);
                 exit(1);
               }
-              cam.heightGiven = true;
-              cam.height = keyValue;
+              cam.camera.heightGiven = true;
+              cam.camera.height = keyValue;
 
             }
           }
@@ -291,11 +289,11 @@ Object* read_scene (char* filename) {
           skip_ws(json);
         }
 
-        if ((!cam.heightGiven) || (!cam.widthGiven)) {
+        if ((!cam.camera.heightGiven) || (!cam.camera.widthGiven)) {
           fprintf(stderr, "Error: Camera height or width not given.\n");
           exit(1); 
         }
- 
+        objectArray[i] = cam;
       }
       
 
