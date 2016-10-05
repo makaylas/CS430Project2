@@ -493,7 +493,26 @@ Object* read_scene (char* filename) {
   }
 }
 
+double plane_intersetion(double *origin, double *direction, double *position, double *normal) {
 
+  double a = (normal[0]*direction[0]) + (normal[1]*direction[1]) + (normal[2]*direction[2]); 
+  
+  double b[3];
+
+  for (int i = 0; i <= 2; i++) {
+    b[i] = position[i] - origin[i];
+  }
+  
+  double d = (b[0]*normal[0]) + (b[1]*normal[1]) + (b[2]*normal[2]);
+
+  double t = d/a;
+
+  if (t < 0) {
+    return -1;
+  }
+
+  return t;
+}
 int main(int c, char** argv) {
   read_scene(argv[1]);
   return 0;
