@@ -562,13 +562,6 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  FILE *inputFile = fopen(argv[3], "r");
-
-  if (inputFile == NULL) {
-    fprintf(stderr, "Error: Unable to open input file.\n");
-    return -1;
-  }
-
   read_scene(argv[3]);
   return 0;
 }
