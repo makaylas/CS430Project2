@@ -110,9 +110,22 @@ char* next_string (FILE* json) {
 double next_number (FILE* json) {
 
   double value;
-  fscanf(json, "%f", &value);
-  // Error check this..
+ 
+  fscanf(json, "%lf", &value);
+  printf("Value: %lf\n", value);
 
+  if (feof(json)) {
+    fprintf(stderr, "Error: Unexpected end of file.\n");
+    exit(1);
+  }
+  if (ferror(json)) {
+    fprintf(stderr, "Error: Error reading file.\n");
+    exit(1);
+  }
+  if (value == EOF) {
+    fprintf(stderr, "Error: Error reading file.\n");
+    exit(1);
+  }
   return value;
 }
 
@@ -182,26 +195,70 @@ void read_scene (char* filename) {
 
       char* value = next_string(json);
 
+      camera cam;
+      cam.height = -1;
+      cam.width = -1;
+
       //If the object is a camera store it in the camera struct
       if (strcmp(value, "camera") == 0) {
 
-      } 
+        while (1) {
+          c = next_c(json);
+          if (c == '}') {
+            // stop parsing this object
+            break;
+          } 
+          else if (c == ',') {
+            // read another field
+            skip_ws(json);
+            char* key = next_string(json);
+            skip_ws(json);
+            expect_c(json, ':');
+            skip_ws(json);
+            printf("Key: %s\n", key);
+            if (strcmp(key, "width") == 0) {
+              double value = next_number(json);
+              if (value < 1) {
+		fprintf(stderr, "Error: Camera width, %f, is invalid.\n", value);
+                exit(1);
+              }
+              cam.width = value;      
+            }
+            else if (strcmp(key, "height") == 0) {
+              double value = next_number(json);
+              if (value < 1) {
+                fprintf(stderr, "Error: Camera height, %f, is invalid.\n", value);
+                exit(1);
+              }
+              cam.height = value;
+            }
+          }
+          else {
+            fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
+                    key, line);
+            //char* value = next_string(json);
+          }
+          skip_ws(json);
+        }
+      }
       //If the object is a sphere store it in the sphere struct
       else if (strcmp(value, "sphere") == 0) {
 
-      } 
+      }
       //If the object is a plane store it in the plane struct
       else if (strcmp(value, "plane") == 0) {
-      
-      } 
+
+      }
       else {
-	fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
-	exit(1);
+        fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
+        exit(1);
+      }
+
       }
 
       skip_ws(json);
 
-      while (1) {
+     /* while (1) {
 	// , }
 	c = next_c(json);
 	if (c == '}') {
@@ -246,7 +303,7 @@ void read_scene (char* filename) {
 	fprintf(stderr, "Error: Expecting ',' or ']' on line %d.\n", line);
 	exit(1);
       }
-    }
+    }*/
   }
 }
 
