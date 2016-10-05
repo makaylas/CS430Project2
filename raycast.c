@@ -541,7 +541,34 @@ double sphere_intersection(double *origin, double *direction, double *offset, do
 }
 
 
-int main(int c, char** argv) {
-  read_scene(argv[1]);
+int main(int argc, char** argv) {
+  if (argc < 5) {
+    fprintf(stderr, "Error: Not enough arguements.\n");
+    return -1;
+  }
+  else if (argc > 5) {
+    fprintf(stderr, "Error: Too many arguements.\n");
+    return -1;
+  }
+
+  int width = (int)(argv[1][0] - '0');
+  int height = (int)(argv[2][0] - '0');
+  if (width < 1) {
+    fprintf(stderr, "Error: %i is an invalid width. \n", width);
+    return -1;
+  }
+  if (height < 1) {
+    fprintf(stderr, "Error: %i is an invalid height. \n", height);
+    return -1;
+  }
+
+  FILE *inputFile = fopen(argv[3], "r");
+
+  if (inputFile == NULL) {
+    fprintf(stderr, "Error: Unable to open input file.\n");
+    return -1;
+  }
+
+  read_scene(argv[3]);
   return 0;
 }
