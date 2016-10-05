@@ -514,7 +514,34 @@ double plane_intersection(double *origin, double *direction, double *position, d
   return t;
 }
 
-double 
+double sphere_intersection(double *origin, double *direction, double *offset, double radius) {
+  double a = (sqr(direction[0]) + sqr(direction[1]) + sqr(direction[2]));
+
+  double b = 2 * (direction[0]*(origin[0]-offset[0]) + direction[1]*(origin[1]-offset[1]) + 
+             direction[2]*(origin[2]-offset[2]));
+  double c = sqr(origin[0]-offset[0]) + sqr(origin[1]-offset[1]) + sqr(origin[2]-offset[2]) - sqr(radius);
+
+  double det = sqr(b) - 4 * a * c;
+ 
+  if (det < 0) {
+   return -1;
+  }
+ 
+  det = sqrt(det);
+
+  double t0 = (-b - det) / (2*a);
+  if (t0 > 0) {
+    return t0;
+  }
+
+  double t1 = (-b + det) / (2*a);
+  if (t1 > 0) {
+    return t1;
+  }
+
+  return -1;
+}
+
 
 int main(int c, char** argv) {
   read_scene(argv[1]);
